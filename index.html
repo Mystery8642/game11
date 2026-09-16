@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Собери слово</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #241a35;
+    --bg-2: #1a1226;
+    --panel: #2e2143;
+    --tile: #f6efdf;
+    --tile-border: #d9c9a3;
+    --ink: #241a35;
+    --cream: #f3ecdd;
+    --cream-dim: #b7a9cf;
+    --gold: #e7b542;
+    --gold-dim: #b58c2e;
+    --mint: #6fd8a0;
+    --coral: #ef6f6c;
+    --line: rgba(231, 181, 66, 0.22);
+  }
+  :root[data-theme="light"] {
+    --bg: #efe7fb; --bg-2: #e3d7f7; --panel: #ffffff;
+    --tile: #ffffff; --tile-border: #d9c9a3;
+    --ink: #241a35; --cream: #251a36; --cream-dim: #5f5177;
+    --gold: #c4901f; --line: rgba(196,144,31,0.25);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%;
+    background: radial-gradient(120% 90% at 50% -10%, var(--panel) 0%, var(--bg) 55%, var(--bg-2) 100%);
+    color: var(--cream);
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+
+  .app {
+    max-width: 520px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 22px 18px 30px;
+  }
+
+  header { text-align: center; margin-bottom: 4px; }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 30px;
+    margin: 0;
+    color: var(--cream);
+  }
+  .subtitle { font-size: 13px; color: var(--cream-dim); margin-top: 3px; }
+
+  .stats-row {
+    display: flex; justify-content: center; gap: 10px;
+    margin: 16px 0 4px;
+  }
+  .stat {
+    background: rgba(0,0,0,0.18);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 8px 14px;
+    text-align: center;
+    min-width: 74px;
+  }
+  .stat .num { font-family: 'JetBrains Mono', monospace; font-size: 19px; font-weight: 700; color: var(--cream); }
+  .stat .lbl { font-size: 10px; color: var(--cream-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+  .stat.streak .num { color: var(--gold); }
+
+  .category-badge {
+    align-self: center;
+    margin: 18px 0 0;
+    background: rgba(231, 181, 66, 0.14);
+    border: 1px solid var(--line);
+    color: var(--gold);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 999px;
+    letter-spacing: 0.02em;
+  }
+
+  .puzzle-panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    margin-top: 14px;
+    padding: 26px 16px 20px;
+    box-shadow: 0 14px 34px rgba(0,0,0,0.28);
+  }
+
+  .slots-row {
+    display: flex; justify-content: center; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 22px;
+  }
+  .slot {
+    width: 38px; height: 46px;
+    border-radius: 8px;
+    border: 2px solid var(--tile-border);
+    background: rgba(246, 239, 223, 0.06);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700; font-size: 19px;
+    color: var(--cream);
+    cursor: pointer;
+    transition: transform 0.12s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+  .slot.filled {
+    background: var(--tile);
+    color: var(--ink);
+    border-color: var(--gold);
+  }
+  .slot.filled:active { transform: scale(0.93); }
+  .slot.hinted { border-color: var(--mint); }
+  .slot.shake { animation: shakeX 0.4s ease; }
+  @keyframes shakeX {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+  .slot.correct-pop { animation: popGood 0.5s ease; }
+  @keyframes popGood {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.14); border-color: var(--mint); }
+    100% { transform: scale(1); }
+  }
+
+  .bank-row {
+    display: flex; justify-content: center; flex-wrap: wrap; gap: 9px;
+  }
+  .tile {
+    width: 42px; height: 50px;
+    border-radius: 9px;
+    background: var(--tile);
+    border: 1px solid var(--tile-border);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700; font-size: 20px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 3px 0 var(--tile-border);
+    transition: transform 0.1s ease, opacity 0.15s ease;
+  }
+  .tile:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--tile-border); }
+  .tile.used { opacity: 0; pointer-events: none; transform: scale(0.7); }
+
+  .message {
+    text-align: center;
+    min-height: 22px;
+    margin-top: 16px;
+    font-weight: 600;
+    font-size: 14.5px;
+    color: var(--cream-dim);
+  }
+  .message.good { color: var(--mint); }
+  .message.bad { color: var(--coral); }
+  .message.hint { color: var(--gold); }
+
+  .controls-row {
+    display: flex; justify-content: center; gap: 10px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+  }
+  .ctrl-btn {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 13.5px;
+    border-radius: 999px;
+    padding: 10px 18px;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    background: rgba(0,0,0,0.18);
+    color: var(--cream);
+    transition: transform 0.1s ease;
+  }
+  .ctrl-btn:active { transform: scale(0.95); }
+  .ctrl-btn.primary {
+    background: linear-gradient(180deg, #f3d27c, var(--gold));
+    color: #2a1c05;
+    border: none;
+    font-weight: 700;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.4);
+  }
+  .ctrl-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  footer { text-align: center; margin-top: 24px; }
+  .reset-btn {
+    background: none; border: none; color: var(--cream-dim);
+    font-size: 12px; text-decoration: underline; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Собери слово</h1>
+    <div class="subtitle">Расставь буквы по местам — слово каждый раз новое</div>
+  </header>
+
+  <div class="stats-row">
+    <div class="stat"><div class="num" id="solvedNum">0</div><div class="lbl">Решено</div></div>
+    <div class="stat"><div class="num" id="scoreNum">0</div><div class="lbl">Очки</div></div>
+    <div class="stat streak"><div class="num" id="streakNum">0</div><div class="lbl">Серия</div></div>
+  </div>
+
+  <div class="category-badge" id="categoryBadge">Категория</div>
+
+  <div class="puzzle-panel">
+    <div class="slots-row" id="slotsRow"></div>
+    <div class="bank-row" id="bankRow"></div>
+  </div>
+
+  <div class="message" id="message">Собери слово из букв ниже</div>
+
+  <div class="controls-row">
+    <button class="ctrl-btn" id="hintBtn">💡 Подсказка · 50 очков</button>
+    <button class="ctrl-btn" id="clearBtn">↺ Очистить</button>
+    <button class="ctrl-btn primary" id="nextBtn">Следующее слово →</button>
+  </div>
+
+  <footer>
+    <button class="reset-btn" id="resetBtn">Сбросить счёт</button>
+  </footer>
+</div>
+
+<script>
+(function () {
+  const STORAGE_KEY = 'word-builder-save-v1';
+
+  const WORD_BANK = [
+    { cat: 'Животные', words: ['ТИГР','ЖИРАФ','БЕЛКА','МЕДВЕДЬ','ЛИСИЦА','ВЕРБЛЮД','ДЕЛЬФИН','ЕНОТ','БАРСУК','ПИНГВИН'] },
+    { cat: 'Еда', words: ['ХЛЕБ','СУП','ПЕЛЬМЕНИ','ВАРЕНЬЕ','ОМЛЕТ','КОТЛЕТА','БЛИН','ОРЕХИ','ТВОРОГ','САЛАТ'] },
+    { cat: 'Страны', words: ['ЯПОНИЯ','КАНАДА','БРАЗИЛИЯ','ЕГИПЕТ','ИНДИЯ','НОРВЕГИЯ','ТУРЦИЯ','ГРЕЦИЯ','КИТАЙ','ПОРТУГАЛИЯ'] },
+    { cat: 'Профессии', words: ['ВРАЧ','ПОВАР','ПИЛОТ','ХУДОЖНИК','УЧИТЕЛЬ','ИНЖЕНЕР','ФЕРМЕР','АКТЁР','ПОЧТАЛЬОН','САДОВНИК'] },
+    { cat: 'Техника', words: ['ТЕЛЕФОН','КАМЕРА','РОБОТ','ПРИНТЕР','НАУШНИКИ','МОНИТОР','КЛАВИША','ДРОН','РОУТЕР','ЗАРЯДКА'] },
+    { cat: 'Природа', words: ['РЕКА','ГОРА','ОБЛАКО','ВОДОПАД','ДОЛИНА','ПУСТЫНЯ','ЛЕДНИК','ОСТРОВ','РОДНИК','ВУЛКАН'] },
+    { cat: 'Спорт', words: ['ФУТБОЛ','ТЕННИС','ПЛАВАНИЕ','ХОККЕЙ','БОКС','БЕГ','ЙОГА','ГРЕБЛЯ','ДАРТС','ШАХМАТЫ'] },
+    { cat: 'Города', words: ['МОСКВА','КАЗАНЬ','САМАРА','ОМСК','СОЧИ','ТОМСК','ПЕНЗА','ОРЁЛ','ТУЛА','АРХАНГЕЛЬСК'] },
+  ];
+
+  // Flatten into {word, cat} entries
+  const ALL_ENTRIES = [];
+  WORD_BANK.forEach(group => {
+    group.words.forEach(w => ALL_ENTRIES.push({ word: w, cat: group.cat }));
+  });
+
+  let queue = [];
+  let current = null;      // { word, cat, letters: [{ch, id}], slots: [null,...] }
+  let hintsUsedThisWord = 0;
+  let score = { solved: 0, points: 0, streak: 0 };
+
+  const solvedNum = document.getElementById('solvedNum');
+  const scoreNum = document.getElementById('scoreNum');
+  const streakNum = document.getElementById('streakNum');
+  const categoryBadge = document.getElementById('categoryBadge');
+  const slotsRow = document.getElementById('slotsRow');
+  const bankRow = document.getElementById('bankRow');
+  const message = document.getElementById('message');
+  const hintBtn = document.getElementById('hintBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  function shuffleArr(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function refillQueue(avoidWord) {
+    let shuffled = shuffleArr(ALL_ENTRIES);
+    // avoid the just-played word landing first again
+    if (avoidWord && shuffled.length > 1 && shuffled[0].word === avoidWord) {
+      [shuffled[0], shuffled[1]] = [shuffled[1], shuffled[0]];
+    }
+    queue = shuffled;
+  }
+
+  function nextEntry() {
+    if (queue.length === 0) refillQueue(current ? current.word : null);
+    return queue.shift();
+  }
+
+  function scrambleLetters(word) {
+    const chars = word.split('');
+    let attempt = chars.slice();
+    if (chars.length > 1) {
+      let tries = 0;
+      do {
+        attempt = shuffleArr(chars);
+        tries++;
+      } while (attempt.join('') === word && tries < 20);
+    }
+    return attempt.map((ch, i) => ({ ch, id: 'l' + i + '_' + Math.random().toString(36).slice(2, 7) }));
+  }
+
+  function loadScore() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) score = { ...score, ...JSON.parse(raw) };
+    } catch (e) { /* ignore */ }
+  }
+  function saveScore() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(score)); } catch (e) { /* ignore */ }
+  }
+  function updateStats() {
+    solvedNum.textContent = score.solved;
+    scoreNum.textContent = score.points;
+    streakNum.textContent = score.streak;
+    hintBtn.disabled = score.points < HINT_COST;
+  }
+
+  function setMessage(text, cls) {
+    message.textContent = text;
+    message.className = 'message' + (cls ? ' ' + cls : '');
+  }
+
+  function startWord() {
+    const entry = nextEntry();
+    hintsUsedThisWord = 0;
+    current = {
+      word: entry.word,
+      cat: entry.cat,
+      letters: scrambleLetters(entry.word),
+      slots: new Array(entry.word.length).fill(null), // each holds tile id or null
+    };
+    categoryBadge.textContent = entry.cat;
+    setMessage('Собери слово из букв ниже', '');
+    nextBtn.disabled = true;
+    updateStats();
+    render();
+  }
+
+  function render() {
+    // slots
+    slotsRow.innerHTML = '';
+    current.slots.forEach((tileId, idx) => {
+      const el = document.createElement('div');
+      el.className = 'slot' + (tileId ? ' filled' : '');
+      if (tileId) {
+        const letterObj = current.letters.find(l => l.id === tileId);
+        el.textContent = letterObj ? letterObj.ch : '';
+        el.addEventListener('click', () => removeFromSlot(idx));
+      }
+      el.dataset.idx = idx;
+      slotsRow.appendChild(el);
+    });
+
+    // bank
+    bankRow.innerHTML = '';
+    current.letters.forEach((l) => {
+      const placed = current.slots.includes(l.id);
+      const tile = document.createElement('div');
+      tile.className = 'tile' + (placed ? ' used' : '');
+      tile.textContent = l.ch;
+      tile.dataset.id = l.id;
+      if (!placed) tile.addEventListener('click', () => placeLetter(l.id));
+      bankRow.appendChild(tile);
+    });
+  }
+
+  function firstEmptySlot() {
+    return current.slots.findIndex(s => s === null);
+  }
+
+  function placeLetter(tileId) {
+    const idx = firstEmptySlot();
+    if (idx === -1) return;
+    current.slots[idx] = tileId;
+    render();
+    if (firstEmptySlot() === -1) {
+      checkAnswer();
+    }
+  }
+
+  function removeFromSlot(idx) {
+    current.slots[idx] = null;
+    render();
+    setMessage('Собери слово из букв ниже', '');
+  }
+
+  function checkAnswer() {
+    const guess = current.slots.map(id => current.letters.find(l => l.id === id).ch).join('');
+    if (guess === current.word) {
+      const pts = 10;
+      score.solved += 1;
+      score.points += pts;
+      score.streak += (hintsUsedThisWord === 0 ? 1 : 0);
+      if (hintsUsedThisWord > 0) score.streak = 0;
+      saveScore();
+      updateStats();
+      setMessage(`Верно! +${pts} очков 🎉`, 'good');
+      document.querySelectorAll('.slot').forEach(s => s.classList.add('correct-pop'));
+      nextBtn.disabled = false;
+      hintBtn.disabled = true;
+    } else {
+      setMessage('Не то слово — попробуй ещё раз', 'bad');
+      document.querySelectorAll('.slot').forEach(s => s.classList.add('shake'));
+      setTimeout(() => {
+        current.slots = new Array(current.word.length).fill(null);
+        render();
+      }, 380);
+    }
+  }
+
+  const HINT_COST = 50;
+
+  function useHint() {
+    const idx = firstEmptySlot();
+    if (idx === -1) return;
+    if (score.points < HINT_COST) {
+      setMessage(`Недостаточно очков для подсказки (нужно ${HINT_COST})`, 'bad');
+      return;
+    }
+    const correctChar = current.word[idx];
+    const availableLetter = current.letters.find(l => l.ch === correctChar && !current.slots.includes(l.id));
+    if (!availableLetter) return;
+    score.points -= HINT_COST;
+    current.slots[idx] = availableLetter.id;
+    hintsUsedThisWord += 1;
+    saveScore();
+    updateStats();
+    setMessage(`Буква подсказана · −${HINT_COST} очков`, 'hint');
+    render();
+    const slotEl = slotsRow.querySelector(`[data-idx="${idx}"]`);
+    if (slotEl) slotEl.classList.add('hinted');
+    if (firstEmptySlot() === -1) checkAnswer();
+  }
+
+  hintBtn.addEventListener('click', useHint);
+  clearBtn.addEventListener('click', () => {
+    current.slots = new Array(current.word.length).fill(null);
+    setMessage('Собери слово из букв ниже', '');
+    render();
+  });
+  nextBtn.addEventListener('click', startWord);
+  resetBtn.addEventListener('click', () => {
+    score = { solved: 0, points: 0, streak: 0 };
+    saveScore();
+    updateStats();
+    setMessage('Счёт сброшен', '');
+  });
+
+  loadScore();
+  updateStats();
+  refillQueue(null);
+  startWord();
+})();
+</script>
+</body>
+</html>
