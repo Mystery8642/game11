@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Голос — озвучка текста</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #10141c;
+    --surface: #181f2b;
+    --surface-2: #202a3a;
+    --border: #2a3547;
+    --text: #eef1f6;
+    --text-muted: #8d97a8;
+    --accent: #ffb84d;
+    --accent-soft: #4a3a20;
+    --wave: #5fd0c4;
+    --danger: #ff6b6b;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f3f1ec;
+      --surface: #ffffff;
+      --surface-2: #eeece5;
+      --border: #ddd8cc;
+      --text: #1c1a16;
+      --text-muted: #706a5c;
+      --accent: #c07a1e;
+      --accent-soft: #f3e0bd;
+      --wave: #2f9e90;
+      --danger: #d1483f;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f3f1ec;
+    --surface: #ffffff;
+    --surface-2: #eeece5;
+    --border: #ddd8cc;
+    --text: #1c1a16;
+    --text-muted: #706a5c;
+    --accent: #c07a1e;
+    --accent-soft: #f3e0bd;
+    --wave: #2f9e90;
+    --danger: #d1483f;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 32px 20px 60px;
+  }
+  .wrap { width: 100%; max-width: 720px; }
+
+  header { margin-bottom: 28px; }
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+  .bars { display: flex; gap: 3px; align-items: flex-end; height: 16px; }
+  .bars span {
+    display: block;
+    width: 3px;
+    background: var(--wave);
+    border-radius: 2px;
+    animation: wave 1.1s ease-in-out infinite;
+  }
+  .bars span:nth-child(1){ height: 40%; animation-delay: 0s; }
+  .bars span:nth-child(2){ height: 100%; animation-delay: .15s; }
+  .bars span:nth-child(3){ height: 65%; animation-delay: .3s; }
+  .bars span:nth-child(4){ height: 90%; animation-delay: .45s; }
+  .bars span:nth-child(5){ height: 55%; animation-delay: .6s; }
+  body:not(.speaking) .bars span { animation-play-state: paused; opacity: .4; }
+  @keyframes wave {
+    0%, 100% { transform: scaleY(0.4); }
+    50% { transform: scaleY(1); }
+  }
+
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(28px, 5vw, 38px);
+    font-weight: 600;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  .sub { color: var(--text-muted); font-size: 15px; max-width: 52ch; line-height: 1.5; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 180px;
+    resize: vertical;
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    outline: none;
+  }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--text-muted); }
+
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .meta-row button {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    padding: 4px;
+  }
+  .meta-row button:hover { color: var(--text); }
+
+  .controls-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .field label {
+    display: block;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .field .row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .field .val {
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    color: var(--text);
+    width: 36px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .hint-note {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    min-height: 15px;
+  }
+  .pole {
+    font-size: 12px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .pitch-readout {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--text);
+    text-align: center;
+  }
+  select, input[type="range"] { accent-color: var(--accent); }
+  select {
+    width: 100%;
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  input[type="range"] {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--border);
+    border-radius: 3px;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--surface);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--surface);
+  }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+  button.btn {
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    border-radius: 10px;
+    padding: 12px 20px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform .1s ease, opacity .15s ease;
+  }
+  button.btn:active { transform: scale(0.97); }
+  button.btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+  .btn-primary { background: var(--accent); color: #1a1204; }
+  .btn-primary:hover:not(:disabled) { opacity: .92; }
+  .btn-secondary { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+  .btn-secondary:hover:not(:disabled) { border-color: var(--accent); }
+  .btn-danger { background: transparent; color: var(--danger); border-color: var(--border); }
+  .btn-danger:hover:not(:disabled) { border-color: var(--danger); }
+
+  .status {
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--text-muted);
+    min-height: 18px;
+  }
+  .unsupported {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 14px;
+    margin-bottom: 16px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">
+      <div class="bars"><span></span><span></span><span></span><span></span><span></span></div>
+      Синтез речи в браузере
+    </div>
+    <h1>Озвучь свой текст</h1>
+    <p class="sub">Впиши текст, выбери голос и нажми «Озвучить». Работает прямо в браузере, ничего никуда не отправляется.</p>
+  </header>
+
+  <div class="unsupported" id="unsupported">
+    Этот браузер не поддерживает синтез речи (Web Speech API). Попробуй открыть страницу в Chrome, Edge или Safari.
+  </div>
+
+  <div class="card">
+    <textarea id="text" placeholder="Например: Привет! Это текст, который я хочу услышать вслух."></textarea>
+    <div class="meta-row">
+      <span id="charCount">0 символов</span>
+      <button id="clearBtn" type="button">Очистить</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="controls-grid">
+      <div class="field">
+        <label for="voiceSelect">Голос</label>
+        <select id="voiceSelect"></select>
+      </div>
+      <div class="field">
+        <label for="rate">Скорость</label>
+        <div class="row">
+          <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
+          <span class="val" id="rateVal">1.0×</span>
+        </div>
+      </div>
+      <div class="field">
+        <label for="pitch">Тон</label>
+        <div class="row">
+          <input type="range" id="pitch" min="0" max="2" step="0.05" value="1.3">
+          <span class="val" id="pitchVal">1.3</span>
+        </div>
+      </div>
+      <div class="field">
+        <label for="volume">Громкость</label>
+        <div class="row">
+          <input type="range" id="volume" min="0" max="5" step="0.05" value="1">
+          <span class="val" id="volumeVal">100%</span>
+        </div>
+        <div class="hint-note" id="volumeHint"></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="playBtn" type="button">▶ Озвучить</button>
+      <button class="btn btn-secondary" id="pauseBtn" type="button" disabled>⏸ Пауза</button>
+      <button class="btn btn-danger" id="stopBtn" type="button" disabled>⏹ Стоп</button>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const synth = window.speechSynthesis;
+  const textEl = document.getElementById('text');
+  const charCount = document.getElementById('charCount');
+  const clearBtn = document.getElementById('clearBtn');
+  const voiceSelect = document.getElementById('voiceSelect');
+  const rateEl = document.getElementById('rate');
+  const pitchEl = document.getElementById('pitch');
+  const volumeEl = document.getElementById('volume');
+  const rateVal = document.getElementById('rateVal');
+  const pitchVal = document.getElementById('pitchVal');
+  const volumeVal = document.getElementById('volumeVal');
+  const playBtn = document.getElementById('playBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const statusEl = document.getElementById('status');
+  const unsupported = document.getElementById('unsupported');
+
+  if (!synth) {
+    unsupported.style.display = 'block';
+    [textEl, voiceSelect, rateEl, pitchEl, volumeEl, playBtn, pauseBtn, stopBtn].forEach(el => el.disabled = true);
+    return;
+  }
+
+  let voices = [];
+  let currentUtterance = null;
+  let isPaused = false;
+
+  function updateCharCount() {
+    const n = textEl.value.length;
+    charCount.textContent = n + (n === 1 ? ' символ' : n < 5 ? ' символа' : ' символов');
+  }
+  textEl.addEventListener('input', updateCharCount);
+  updateCharCount();
+
+  clearBtn.addEventListener('click', () => {
+    textEl.value = '';
+    updateCharCount();
+    textEl.focus();
+  });
+
+  function langLabel(code) {
+    try {
+      const dn = new Intl.DisplayNames(['ru'], { type: 'language' });
+      const base = code.split('-')[0];
+      return dn.of(base) || code;
+    } catch (e) {
+      return code;
+    }
+  }
+
+  // Keywords that commonly indicate voice gender across common TTS engines
+  const MALE_HINTS = ['pavel', 'dmitri', 'dmitry', 'yuri', 'david', 'daniel', 'mark',
+    'male', 'alex', 'james', 'george', 'oliver', 'fred', 'aaron', 'arthur', 'gordon',
+    'guy', 'ivan', 'maxim', 'nikita', 'boris', 'egor', 'ruslan'];
+  const FEMALE_HINTS = ['irina', 'milena', 'anna', 'elena', 'katya', 'female', 'zira',
+    'susan', 'samantha', 'victoria', 'karen', 'moira', 'tessa', 'fiona', 'kate', 'alisa',
+    'olga', 'maria', 'svetlana'];
+
+  function guessGender(name) {
+    const n = name.toLowerCase();
+    if (MALE_HINTS.some(h => n.includes(h))) return 'male';
+    if (FEMALE_HINTS.some(h => n.includes(h))) return 'female';
+    return 'unknown';
+  }
+
+  function populateVoices() {
+    voices = synth.getVoices();
+    if (!voices.length) return;
+
+    const prevValue = voiceSelect.value;
+    voiceSelect.innerHTML = '';
+
+    // Keep only voices that aren't clearly male — female voice only
+    const filtered = voices.filter(v => guessGender(v.name) !== 'male');
+    const pool = filtered.length ? filtered : voices;
+
+    // Sort: Russian first, then alphabetically by language label
+    const sorted = [...pool].sort((a, b) => {
+      const aRu = a.lang.toLowerCase().startsWith('ru') ? 0 : 1;
+      const bRu = b.lang.toLowerCase().startsWith('ru') ? 0 : 1;
+      if (aRu !== bRu) return aRu - bRu;
+      return a.lang.localeCompare(b.lang) || a.name.localeCompare(b.name);
+    });
+
+    sorted.forEach((v, i) => {
+      const opt = document.createElement('option');
+      opt.value = v.name;
+      opt.textContent = `${v.name} — ${langLabel(v.lang)} (${v.lang})`;
+      voiceSelect.appendChild(opt);
+    });
+
+    // Prefer a Russian, female-sounding voice by default if available
+    if (prevValue && sorted.some(v => v.name === prevValue)) {
+      voiceSelect.value = prevValue;
+    } else {
+      const ruVoices = sorted.filter(v => v.lang.toLowerCase().startsWith('ru'));
+      const ruFemale = ruVoices.find(v => guessGender(v.name) === 'female');
+      const ruAny = ruVoices.find(v => guessGender(v.name) !== 'male') || ruVoices[0];
+      const anyFemale = sorted.find(v => guessGender(v.name) === 'female');
+      const pick = ruFemale || ruAny || anyFemale || sorted[0];
+      if (pick) voiceSelect.value = pick.name;
+    }
+
+    if (!sorted.some(v => v.lang.toLowerCase().startsWith('ru'))) {
+      statusEl.textContent = 'Русский голос не найден в этой системе — можно выбрать любой другой язык.';
+    } else {
+      statusEl.textContent = '';
+    }
+  }
+
+  populateVoices();
+  if (synth.onvoiceschanged !== undefined) {
+    synth.onvoiceschanged = populateVoices;
+  }
+
+  rateEl.addEventListener('input', () => { rateVal.textContent = parseFloat(rateEl.value).toFixed(1) + '×'; });
+  pitchEl.addEventListener('input', () => { pitchVal.textContent = parseFloat(pitchEl.value).toFixed(2); });
+  const volumeHint = document.getElementById('volumeHint');
+  function updateVolumeDisplay() {
+    const raw = parseFloat(volumeEl.value);
+    volumeVal.textContent = Math.round(raw * 100) + '%';
+    volumeHint.textContent = raw > 1
+      ? 'Браузер ограничивает реальную громкость 100% — выше этого порога звук громче не станет.'
+      : '';
+  }
+  volumeEl.addEventListener('input', updateVolumeDisplay);
+  updateVolumeDisplay();
+
+  function setSpeakingUI(speaking) {
+    document.body.classList.toggle('speaking', speaking);
+    playBtn.disabled = speaking;
+    pauseBtn.disabled = !speaking;
+    stopBtn.disabled = !speaking;
+  }
+
+  function speak() {
+    const text = textEl.value.trim();
+    if (!text) {
+      statusEl.textContent = 'Сначала впиши текст.';
+      textEl.focus();
+      return;
+    }
+    synth.cancel();
+
+    const utter = new SpeechSynthesisUtterance(text);
+    const chosen = voices.find(v => v.name === voiceSelect.value);
+    if (chosen) {
+      utter.voice = chosen;
+      utter.lang = chosen.lang;
+    }
+    utter.rate = parseFloat(rateEl.value);
+    utter.pitch = parseFloat(pitchEl.value);
+    utter.volume = Math.min(1, parseFloat(volumeEl.value));
+
+    utter.onstart = () => {
+      setSpeakingUI(true);
+      isPaused = false;
+      pauseBtn.textContent = '⏸ Пауза';
+      statusEl.textContent = 'Озвучиваю…';
+    };
+    utter.onend = () => {
+      setSpeakingUI(false);
+      statusEl.textContent = 'Готово.';
+    };
+    utter.onerror = (e) => {
+      setSpeakingUI(false);
+      if (e.error !== 'interrupted' && e.error !== 'canceled') {
+        statusEl.textContent = 'Не получилось озвучить: ' + e.error;
+      }
+    };
+
+    currentUtterance = utter;
+    synth.speak(utter);
+  }
+
+  playBtn.addEventListener('click', speak);
+
+  pauseBtn.addEventListener('click', () => {
+    if (!currentUtterance) return;
+    if (!isPaused) {
+      synth.pause();
+      isPaused = true;
+      pauseBtn.textContent = '▶ Продолжить';
+      statusEl.textContent = 'На паузе.';
+      document.body.classList.remove('speaking');
+    } else {
+      synth.resume();
+      isPaused = false;
+      pauseBtn.textContent = '⏸ Пауза';
+      statusEl.textContent = 'Озвучиваю…';
+      document.body.classList.add('speaking');
+    }
+  });
+
+  stopBtn.addEventListener('click', () => {
+    synth.cancel();
+    setSpeakingUI(false);
+    isPaused = false;
+    pauseBtn.textContent = '⏸ Пауза';
+    statusEl.textContent = 'Остановлено.';
+  });
+
+  // Keep voices alive across some browsers that need periodic nudge
+  setInterval(() => {
+    if (synth.speaking && !synth.paused) {
+      // no-op keepalive is unnecessary in most browsers; left out intentionally
+    }
+  }, 10000);
+})();
+</script>
+</body>
+</html>
